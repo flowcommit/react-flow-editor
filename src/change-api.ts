@@ -1,5 +1,6 @@
 import {Endpoint} from './editor';
 import {Node} from './types';
+import {NodeState} from './adjust';
 
 export interface NodeRemoved {
   id: string;
@@ -37,5 +38,12 @@ export interface NodeCollapseChanged {
   shouldBeCollapsed: boolean;
 }
 
+export interface NodeMoved {
+  id: string;
+  node: Node;
+  nodeState: NodeState;
+  type: 'NodeMoved';
+}
+
 export type ChangeAction = NodeRemoved|ConnectionRemoved|ConnectionCreated|
-    NodeCreated|NodeCollapseChanged;
+    NodeCreated|NodeCollapseChanged|NodeMoved;

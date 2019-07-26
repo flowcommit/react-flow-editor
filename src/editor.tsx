@@ -140,13 +140,15 @@ export class Editor extends React.Component<Editor.Props, State> {
             }
             // Find suitable place
             const pos = node.position || { x: 10 + margin.x, y: 10 + margin.y };
-            for (let place of usedPlace) {
-                if (place.hit(pos))
-                    pos.x = place.right + margin.x;
-                pos.y = place.top;
+            if (!node.position) {
+                for (let place of usedPlace) {
+                    if (place.hit(pos))
+                        pos.x = place.right + margin.x;
+                    pos.y = place.top;
+                }
             }
             const size = { x: 100, y: 100 };    // TODO: get size out of ref
-            nodesState.set(node.id, { pos, size, isCollapsed: false });
+            nodesState.set(node.id, { pos, size, isCollapsed: !!node.isCollapsed });
             usedPlace.push(new Rect(pos, size));
 
             for (let k in node.inputs) {
@@ -161,6 +163,7 @@ export class Editor extends React.Component<Editor.Props, State> {
                 const key = EndpointImpl.computeId(node.id, i, 'output');
                 connectionState.set(key, outputPos);
             }
+            console.log('ADDED', node.id, pos)
         }
         const transformation = { dx: 0, dy: 0, zoom: 1 };
         const componentSize: Size = { width: 800, height: 600 };
@@ -198,6 +201,15 @@ export class Editor extends React.Component<Editor.Props, State> {
     }
 
     private onDragEnded(e: React.MouseEvent<HTMLElement>) {
+        if (this.currentAction && this.currentAction.type === 'node') {
+            const id = this.currentAction.id;
+            const node = this.props.nodes.find(n => n.id === id);
+            const nodeState = this.state.nodesState.get(id);
+            const { config } = this.props;
+            const updateState = () => {};
+            if (config.onChanged)
+                config.onChanged({ type: 'NodeMoved', node, nodeState, id }, updateState);
+        }
         this.currentAction = undefined;
         this.setState(state => ({ ...state, workingItem: undefined }));
     }
