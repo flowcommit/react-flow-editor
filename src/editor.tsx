@@ -127,6 +127,15 @@ export class Editor extends React.Component<Editor.Props, State> {
         // this.editorBoundingRect = { x: 0, y: 0, height: 0, width: 0, bottom: 0, left: 0, top: 0, right: 0 };
     }
 
+    componentDidUpdate(prevProps: any) {
+        // Component may have received new nodes
+        if (prevProps.nodes !== this.props.nodes) {
+            // Reinitialize
+            this.endpointCache.clear();
+            this.setState(this.initialState());
+        }
+    }
+
     private initialState() {
         const { props } = this;
         const nodesState = new Map<string, NodeState>();
