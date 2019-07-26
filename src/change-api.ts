@@ -45,5 +45,12 @@ export interface NodeMoved {
   type: 'NodeMoved';
 }
 
+export interface TransformationChanged {
+  dx: number;
+  dy: number;
+  zoom: number;
+  type: 'TransformationChanged';
+}
+
 export type ChangeAction = NodeRemoved|ConnectionRemoved|ConnectionCreated|
-    NodeCreated|NodeCollapseChanged|NodeMoved;
+    NodeCreated|NodeCollapseChanged|NodeMoved|TransformationChanged;

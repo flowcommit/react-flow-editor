@@ -132,11 +132,11 @@ export class Editor extends React.Component<Editor.Props, State> {
         if (prevProps.nodes !== this.props.nodes) {
             // Reinitialize
             this.endpointCache.clear();
-            this.setState(this.initialState());
+            this.setState(this.initialState(this.state.transformation));
         }
     }
 
-    private initialState() {
+    private initialState(previousTransformation?: any) {
         const { props } = this;
         const nodesState = new Map<string, NodeState>();
         const connectionState = new Map<string, Vector2d>();
@@ -173,7 +173,7 @@ export class Editor extends React.Component<Editor.Props, State> {
                 connectionState.set(key, outputPos);
             }
         }
-        const transformation = { dx: 0, dy: 0, zoom: 1 };
+        const transformation = previousTransformation || this.props.config.initialTransformation || { dx: 0, dy: 0, zoom: 1 };
         const componentSize: Size = { width: 800, height: 600 };
         return { nodesState, connectionState, transformation, componentSize };
     }
@@ -255,6 +255,11 @@ export class Editor extends React.Component<Editor.Props, State> {
                 const pt = this.state.transformation;
                 const transformation = { dx: pt.dx + dx, dy: pt.dy + dy, zoom: pt.zoom };
                 this.setState(state => ({ ...state, transformation }));
+                const updateState = () => {};
+                const { config } = this.props;
+                if (config.onChanged)
+                    config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.dy }, updateState);
+
             }
         });
         this.currentAction.lastPos = newPos;
@@ -456,6 +461,10 @@ export class Editor extends React.Component<Editor.Props, State> {
         const transformation = { dx, dy, zoom };
 
         this.setState(state => ({ ...state, transformation }));
+        const updateState = () => {};
+        const { config } = this.props;
+        if (config.onChanged)
+            config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.dy }, updateState);
     }
 
     //#endregion "User interaction"

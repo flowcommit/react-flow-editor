@@ -69,6 +69,10 @@ export interface Config {
    * Classnames for postcss user
    */
   style?: Style;
+  /**
+   * Initial transformation
+   */
+  initialTransformation?: { dx: number, dy: number, zoom: number };
 }
 
 export interface Node {
