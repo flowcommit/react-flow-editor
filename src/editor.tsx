@@ -163,7 +163,6 @@ export class Editor extends React.Component<Editor.Props, State> {
                 const key = EndpointImpl.computeId(node.id, i, 'output');
                 connectionState.set(key, outputPos);
             }
-            console.log('ADDED', node.id, pos)
         }
         const transformation = { dx: 0, dy: 0, zoom: 1 };
         const componentSize: Size = { width: 800, height: 600 };
