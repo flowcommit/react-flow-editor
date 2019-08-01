@@ -110,7 +110,9 @@ function filterIfArray<T>(input: T | T[], predicate: (t: T) => boolean): T {
 //#endregion "Helper function"
 
 export class Editor extends React.Component<Editor.Props, State> {
-
+    private translateDx = 0
+    private translateDy = 0
+    private translateTimer = null as any
     private currentAction?: {
         lastPos: Vector2d, id: string, type: 'node'
     } | { lastPos: Vector2d, endpoint: Endpoint, type: 'connection' } | { lastPos: Vector2d, type: 'translate' };
@@ -252,14 +254,31 @@ export class Editor extends React.Component<Editor.Props, State> {
                 }
             }
             else if (this.currentAction.type === 'translate') {
-                const pt = this.state.transformation;
-                const transformation = { dx: pt.dx + dx, dy: pt.dy + dy, zoom: pt.zoom };
-                this.setState(state => ({ ...state, transformation }));
-                const updateState = () => {};
-                const { config } = this.props;
-                if (config.onChanged)
-                    config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.dy }, updateState);
-
+                let translateDx = dx
+                let translateDy = dy
+                if (this.translateTimer) {
+                    clearTimeout(this.translateTimer)
+                    translateDx += this.translateDx
+                    translateDy += this.translateDy
+                }
+                this.translateDx = translateDx
+                this.translateDy = translateDy
+                this.translateTimer = setTimeout(() => {
+                    this.translateTimer = null
+                    this.translateDx = 0
+                    this.translateDy = 0
+                    const transformation = {
+                        dx: this.state.transformation.dx + translateDx,
+                        dy: this.state.transformation.dy + translateDy,
+                        zoom: this.state.transformation.zoom,
+                    };
+                    //this.setState(state => ({ ...state, transformation }));
+                    this.setState({ transformation: transformation })
+                    const updateState = () => {};
+                    const { config } = this.props;
+                    if (config.onChanged)
+                        config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.zoom }, updateState);
+                }, 10)
             }
         });
         this.currentAction.lastPos = newPos;
@@ -340,13 +359,13 @@ export class Editor extends React.Component<Editor.Props, State> {
             if (Array.isArray(inputNode.inputs[input.port].connection))
                 (inputNode.inputs[input.port].connection as Connection[]).push(outputConnection);
             else
-                inputNode.inputs[input.port].connection = outputConnection;
+                inputNode.inputs[input.port].connection = [outputConnection];
 
             const inputConnection = { nodeId: inputNode.id, port: input.port };
             if (Array.isArray(outputNode.outputs[output.port].connection))
                 (outputNode.outputs[output.port].connection as Connection[]).push(inputConnection);
             else
-                outputNode.outputs[output.port].connection = inputConnection;
+                outputNode.outputs[output.port].connection = [inputConnection];
 
             this.setState(state => state);
         };
@@ -464,7 +483,7 @@ export class Editor extends React.Component<Editor.Props, State> {
         const updateState = () => {};
         const { config } = this.props;
         if (config.onChanged)
-            config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.dy }, updateState);
+            config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.zoom }, updateState);
     }
 
     //#endregion "User interaction"
@@ -822,8 +841,8 @@ export class Editor extends React.Component<Editor.Props, State> {
                         notes: connection.notes
                     };
                     const outputConn: Endpoint = {
-                        nodeId: input.connection.nodeId,
-                        port: input.connection.port,
+                        nodeId: connection.nodeId,
+                        port: connection.port,
                         kind: 'output',
                         additionalClassName: oppConnection.classNames,
                         notes: oppConnection.notes

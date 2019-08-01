@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "sourceMap": true,
-    "target": "es5",
+    "target": "esnext",
     "jsx": "react",
     "module": "commonjs",
     "moduleResolution": "node",
@@ -10,11 +10,13 @@
     "declaration": true,
     "noImplicitAny": false,
     "noImplicitReturns": false,
+    "noImplicitUseStrict": true,
     "removeComments": true,
     "strictNullChecks": false,
     "outDir": "dist",
     "downlevelIteration": true,
     "lib": [
+      "esnext",
       "es6",
       "es7",
       "dom"

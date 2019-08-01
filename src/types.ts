@@ -119,7 +119,7 @@ export interface Connection {
  */
 export interface Port {
   name: string;
-  connection?: Connection|
+  connection?:
       Connection[];  // Should this be restricted to arrays only?
   payload?: any;     // No UseCase up to now
   renderer?: (connection: Port) => JSX.Element;  // No UseCase up to now
