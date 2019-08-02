@@ -243,13 +243,15 @@ export class Editor extends React.Component<Editor.Props, State> {
         if (this.currentAction === undefined) return;
         const newPos = { x: e.clientX, y: e.clientY };
         const { x: dx, y: dy } = Vector2d.subtract(newPos, this.currentAction.lastPos);
-        this.setState(state => {
-            if (this.currentAction.type === 'node') {
+        if (this.currentAction.type === 'node') {
+            this.setState(state => {
                 state.nodesState.get(this.currentAction.id).pos.x += dx;
                 state.nodesState.get(this.currentAction.id).pos.y += dy;
                 return { ...state };
-            }
-            else if (this.currentAction.type === 'connection') {
+            })
+        }
+        else if (this.currentAction.type === 'connection') {
+            this.setState(state => {
                 const { endpoint } = this.currentAction;
                 const free = Vector2d.subtract(newPos, this.editorBoundingRect);
 
@@ -267,19 +269,19 @@ export class Editor extends React.Component<Editor.Props, State> {
                     const workingItem: WorkItem = { type: 'connection', input: free, output: fixed };
                     return { ...state, workingItem };
                 }
+            })
+        }
+        else if (this.currentAction.type === 'translate') {
+            const transformation = {
+                dx: this.currentAction.transformation.dx + dx,
+                dy: this.currentAction.transformation.dy + dy,
+                zoom: this.currentAction.transformation.zoom,
+            };
+            this.currentAction.transformation = transformation
+            if (this.nodesContainerRef) {
+                this.nodesContainerRef.style = `transform: matrix(${transformation.zoom},0,0,${transformation.zoom},${transformation.dx},${transformation.dy})`
             }
-            else if (this.currentAction.type === 'translate') {
-                const transformation = {
-                    dx: this.currentAction.transformation.dx + dx,
-                    dy: this.currentAction.transformation.dy + dy,
-                    zoom: this.currentAction.transformation.zoom,
-                };
-                this.currentAction.transformation = transformation
-                if (this.nodesContainerRef) {
-                    this.nodesContainerRef.style = `transform: matrix(${transformation.zoom},0,0,${transformation.zoom},${transformation.dx},${transformation.dy})`
-                }
-             }
-        });
+        }
         this.currentAction.lastPos = newPos;
     }
 
@@ -617,8 +619,6 @@ export class Editor extends React.Component<Editor.Props, State> {
     }
 
     render() {
-        const startTime = new Date().getTime()
-
         const workingConnection = (info: WorkItemConnection) => {
             return this.connectionPath(info.output, info.input);
         };
@@ -917,7 +917,7 @@ export class Editor extends React.Component<Editor.Props, State> {
             props.additionalClassName || []
         );
 
-        console.log('RENDER EDITOR', new Date().getTime() - startTime, 'ms')
+        console.log('RENDER EDITOR')
         return (
             <div style={props.style} ref={this.onEditorUpdate.bind(this)}
                 tabIndex={0} onKeyDown={this.onKeyDown.bind(this)} onWheel={this.onWheel.bind(this)}
