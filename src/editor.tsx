@@ -111,9 +111,10 @@ function filterIfArray<T>(input: T | T[], predicate: (t: T) => boolean): T {
 
 export class Editor extends React.Component<Editor.Props, State> {
     private endpointDelayTimer = null as any
-    nodesContainerRef = null as any
+    private nodeRefs = {} as any
+    private nodesContainerRef = null as any
     private currentAction?: {
-      lastPos: Vector2d, id: string, type: 'node'
+      lastPos: Vector2d, id: string, type: 'node', dx: number, dy: number
     } | {
       lastPos: Vector2d, endpoint: Endpoint, type: 'connection'
     } | {
@@ -212,7 +213,7 @@ export class Editor extends React.Component<Editor.Props, State> {
 
     private onDragStarted(id: string, e: React.MouseEvent<HTMLElement>) {
         if (e.button === BUTTON_LEFT)
-            this.currentAction = { lastPos: { x: e.clientX, y: e.clientY }, id: id, type: 'node' };
+            this.currentAction = { lastPos: { x: e.clientX, y: e.clientY }, id: id, type: 'node', dx: 0, dy: 0 };
     }
 
     private onDragEnded(e: React.MouseEvent<HTMLElement>) {
@@ -221,11 +222,16 @@ export class Editor extends React.Component<Editor.Props, State> {
             const node = this.props.nodes.find(n => n.id === id);
             const nodeState = this.state.nodesState.get(id);
             const { config } = this.props;
-            const updateState = () => {};
+            nodeState.pos.x += this.currentAction.dx;
+            nodeState.pos.y += this.currentAction.dy;
+            this.setState(state => {
+                return { ...state };
+            })
+            const updateState = () => {
+            };
             if (config.onChanged)
                 config.onChanged({ type: 'NodeMoved', node, nodeState, id }, updateState);
         } else if (this.currentAction && this.currentAction.type === 'translate') {
-            console.log('TRANSLATE END')
             const transformation = this.currentAction.transformation
             const updateState = () => {};
             const { config } = this.props;
@@ -244,24 +250,27 @@ export class Editor extends React.Component<Editor.Props, State> {
         const newPos = { x: e.clientX, y: e.clientY };
         const { x: dx, y: dy } = Vector2d.subtract(newPos, this.currentAction.lastPos);
         if (this.currentAction.type === 'node') {
-            this.setState(state => {
-                state.nodesState.get(this.currentAction.id).pos.x += dx;
-                state.nodesState.get(this.currentAction.id).pos.y += dy;
-                return { ...state };
-            })
+            // Track total delta
+            this.currentAction.dx += dx
+            this.currentAction.dy += dy
+            const nodeRef = this.nodeRefs[this.currentAction.id]
+            if (nodeRef) {
+                const nodeState = this.state.nodesState.get(this.currentAction.id);
+                nodeRef.style = 'left:' +  (nodeState.pos.x + this.currentAction.dx) + 'px; top:' + (nodeState.pos.y + this.currentAction.dy) + 'px'
+            }
         }
         else if (this.currentAction.type === 'connection') {
+            const { endpoint } = this.currentAction;
+            const free = Vector2d.subtract(newPos, this.editorBoundingRect);
+
+            const key = EndpointImpl.computeId(endpoint.nodeId, endpoint.port, endpoint.kind);
+
+            const offset = this.state.connectionState.get(key);
+            const node = this.state.nodesState.get(endpoint.nodeId);
+
+            const fixed = Vector2d.add(offset, node.pos);
+
             this.setState(state => {
-                const { endpoint } = this.currentAction;
-                const free = Vector2d.subtract(newPos, this.editorBoundingRect);
-
-                const key = EndpointImpl.computeId(endpoint.nodeId, endpoint.port, endpoint.kind);
-
-                const offset = this.state.connectionState.get(key);
-                const node = this.state.nodesState.get(endpoint.nodeId);
-
-                const fixed = Vector2d.add(offset, node.pos);
-
                 if (endpoint.kind === 'input') {
                     const workingItem: WorkItem = { type: 'connection', input: fixed, output: free };
                     return { ...state, workingItem };
@@ -774,6 +783,7 @@ export class Editor extends React.Component<Editor.Props, State> {
             const bodyClassNames = classNameOrDefault('body');
             return (
                 <div
+                    ref={(nodeElement: any) => this.nodeRefs[node.id] = nodeElement }
                     onClick={this.select.bind(this, 'node', node.id)}
                     key={node.id}
                     style={nodeStyle(nodeState.pos)}
