@@ -23,9 +23,11 @@ export class MenuItem extends React.Component<MenuItem.Props, State> {
     private boundingRect?: DOMRect;
     private offset?: Vector2d;
 
+    /*
     constructor(props: MenuItem.Props) {
         super(props);
     }
+    */
 
     private onStartCreatingNewNode(e: React.MouseEvent<HTMLElement>) {
         if (e.button === BUTTON_LEFT) {

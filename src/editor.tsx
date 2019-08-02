@@ -110,12 +110,15 @@ function filterIfArray<T>(input: T | T[], predicate: (t: T) => boolean): T {
 //#endregion "Helper function"
 
 export class Editor extends React.Component<Editor.Props, State> {
-    private translateDx = 0
-    private translateDy = 0
-    private translateTimer = null as any
+    private endpointDelayTimer = null as any
+    nodesContainerRef = null as any
     private currentAction?: {
-        lastPos: Vector2d, id: string, type: 'node'
-    } | { lastPos: Vector2d, endpoint: Endpoint, type: 'connection' } | { lastPos: Vector2d, type: 'translate' };
+      lastPos: Vector2d, id: string, type: 'node'
+    } | {
+      lastPos: Vector2d, endpoint: Endpoint, type: 'connection'
+    } | {
+      lastPos: Vector2d, type: 'translate', transformation: any
+    };
     private endpointCache: Map<string, Vector2d>;
     private gridSize?: Size;
     private editorBoundingRect?: DOMRect;
@@ -133,6 +136,7 @@ export class Editor extends React.Component<Editor.Props, State> {
         // Component may have received new nodes
         if (prevProps.nodes !== this.props.nodes) {
             // Reinitialize
+            console.log('REINITIALIZE NODES')
             this.endpointCache.clear();
             this.setState(this.initialState(this.state.transformation));
         }
@@ -192,7 +196,8 @@ export class Editor extends React.Component<Editor.Props, State> {
 
     private toggleExpandNode(id: string) {
         const node = this.props.nodes.find(n => n.id === id);
-        const desiredState = node.isCollapsed !== undefined ? !node.isCollapsed : !this.state.nodesState.get(id).isCollapsed;
+        const nodeState = this.state.nodesState.get(id)
+        const desiredState = nodeState.isCollapsed !== undefined ? !nodeState.isCollapsed : !node.isCollapsed;
         const updateState = () =>
             this.setState(state => {
                 state.nodesState.get(id).isCollapsed = desiredState;
@@ -219,6 +224,16 @@ export class Editor extends React.Component<Editor.Props, State> {
             const updateState = () => {};
             if (config.onChanged)
                 config.onChanged({ type: 'NodeMoved', node, nodeState, id }, updateState);
+        } else if (this.currentAction && this.currentAction.type === 'translate') {
+            console.log('TRANSLATE END')
+            const transformation = this.currentAction.transformation
+            const updateState = () => {};
+            const { config } = this.props;
+            if (config.onChanged)
+                config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.zoom }, updateState);
+            this.setState({
+                transformation: transformation,
+            })
         }
         this.currentAction = undefined;
         this.setState(state => ({ ...state, workingItem: undefined }));
@@ -254,32 +269,16 @@ export class Editor extends React.Component<Editor.Props, State> {
                 }
             }
             else if (this.currentAction.type === 'translate') {
-                let translateDx = dx
-                let translateDy = dy
-                if (this.translateTimer) {
-                    clearTimeout(this.translateTimer)
-                    translateDx += this.translateDx
-                    translateDy += this.translateDy
+                const transformation = {
+                    dx: this.currentAction.transformation.dx + dx,
+                    dy: this.currentAction.transformation.dy + dy,
+                    zoom: this.currentAction.transformation.zoom,
+                };
+                this.currentAction.transformation = transformation
+                if (this.nodesContainerRef) {
+                    this.nodesContainerRef.style = `transform: matrix(${transformation.zoom},0,0,${transformation.zoom},${transformation.dx},${transformation.dy})`
                 }
-                this.translateDx = translateDx
-                this.translateDy = translateDy
-                this.translateTimer = setTimeout(() => {
-                    this.translateTimer = null
-                    this.translateDx = 0
-                    this.translateDy = 0
-                    const transformation = {
-                        dx: this.state.transformation.dx + translateDx,
-                        dy: this.state.transformation.dy + translateDy,
-                        zoom: this.state.transformation.zoom,
-                    };
-                    //this.setState(state => ({ ...state, transformation }));
-                    this.setState({ transformation: transformation })
-                    const updateState = () => {};
-                    const { config } = this.props;
-                    if (config.onChanged)
-                        config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.zoom }, updateState);
-                }, 10)
-            }
+             }
         });
         this.currentAction.lastPos = newPos;
     }
@@ -456,7 +455,7 @@ export class Editor extends React.Component<Editor.Props, State> {
 
     private onMouseGlobalDown(e: React.MouseEvent<HTMLElement>) {
         if (e.button === BUTTON_MIDDLE) {
-            this.currentAction = { type: 'translate', lastPos: { x: e.clientX, y: e.clientY } };
+            this.currentAction = { type: 'translate', lastPos: { x: e.clientX, y: e.clientY }, transformation: this.state.transformation };
         }
         else if (e.button === BUTTON_LEFT) {
             this.setState(state => {
@@ -503,11 +502,22 @@ export class Editor extends React.Component<Editor.Props, State> {
         if (cached === undefined || !Vector2d.compare(offset, cached)) {
             this.endpointCache.set(key, offset);
             // TODO: Bundle all connection endpoint updates to one this.setState call
+            this.state.connectionState.set(key, offset)
+            if (this.endpointDelayTimer) clearTimeout(this.endpointDelayTimer)
+            this.endpointDelayTimer = setTimeout(() => {
+                this.endpointDelayTimer = null
+                console.log('CONNECTION ENDPOINT STATE FLUSH')
+                this.setState(state => {
+                    return state;
+                })
+            }, 10)
+            /*
             setImmediate(() =>
                 this.setState(state => {
                     state.connectionState.set(key, offset);
                     return state;
                 }));
+            */
         }
 
     }
@@ -601,11 +611,13 @@ export class Editor extends React.Component<Editor.Props, State> {
             this.editorBoundingRect.x !== rect.x ||
             this.editorBoundingRect.y !== rect.y) {
             this.editorBoundingRect = rect;
+            console.log('Set editor bounding rect', rect)
             this.setState(state => state);
         }
     }
 
     render() {
+        const startTime = new Date().getTime()
 
         const workingConnection = (info: WorkItemConnection) => {
             return this.connectionPath(info.output, info.input);
@@ -740,7 +752,7 @@ export class Editor extends React.Component<Editor.Props, State> {
 
         const nodes = props.nodes.map(node => {
             const nodeState = state.nodesState.get(node.id);
-            const isCollapsed = node.isCollapsed !== undefined ? node.isCollapsed : nodeState.isCollapsed;
+            const isCollapsed = nodeState.isCollapsed !== undefined ? nodeState.isCollapsed : node.isCollapsed;
             const isSelected = this.state.selection && this.state.selection.id === node.id;
             const nodeClassNames = classNames(
                 classNameOrDefault('node'),
@@ -905,6 +917,7 @@ export class Editor extends React.Component<Editor.Props, State> {
             props.additionalClassName || []
         );
 
+        console.log('RENDER EDITOR', new Date().getTime() - startTime, 'ms')
         return (
             <div style={props.style} ref={this.onEditorUpdate.bind(this)}
                 tabIndex={0} onKeyDown={this.onKeyDown.bind(this)} onWheel={this.onWheel.bind(this)}
@@ -916,7 +929,7 @@ export class Editor extends React.Component<Editor.Props, State> {
                     {connectionsLines}
                     {workingItem}
                 </svg>
-                <div style={nodesContainerStyle} >
+                <div style={nodesContainerStyle} ref={(elem: any) => this.nodesContainerRef = elem}>
                     {nodes}
                 </div>
             </div>
