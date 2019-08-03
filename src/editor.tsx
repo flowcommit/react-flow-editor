@@ -19,6 +19,7 @@ export namespace Editor {
         nodes: Node[];
         style?: React.CSSProperties;
         additionalClassName?: string;
+        zoomOverride: number;
     }
 }
 
@@ -288,7 +289,7 @@ export class Editor extends React.Component<Editor.Props, State> {
             };
             this.currentAction.transformation = transformation
             if (this.nodesContainerRef) {
-                this.nodesContainerRef.style = `transform: matrix(${transformation.zoom},0,0,${transformation.zoom},${transformation.dx},${transformation.dy})`
+                this.nodesContainerRef.style = `transform: matrix(${this.props.zoomOverride || transformation.zoom},0,0,${this.props.zoomOverride || transformation.zoom},${transformation.dx},${transformation.dy})`
             }
         }
         this.currentAction.lastPos = newPos;
@@ -919,7 +920,7 @@ export class Editor extends React.Component<Editor.Props, State> {
         };
 
         const nodesContainerStyle = {
-            transform: `matrix(${transformation.zoom},0,0,${transformation.zoom},${transformation.dx},${transformation.dy})`
+            transform: `matrix(${this.props.zoomOverride || transformation.zoom},0,0,${this.props.zoomOverride || transformation.zoom},${transformation.dx},${transformation.dy})`
         };
 
         const editorClassName = classNames(
