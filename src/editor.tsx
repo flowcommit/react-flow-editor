@@ -470,6 +470,10 @@ export class Editor extends React.Component<Editor.Props, State> {
             this.currentAction = { type: 'translate', lastPos: { x: e.clientX, y: e.clientY }, transformation: this.state.transformation };
         }
         else if (e.button === BUTTON_LEFT) {
+            console.log('LEFT CLICK', e.target)
+            if ((e.target as Element).nodeName === 'svg') {
+                this.currentAction = { type: 'translate', lastPos: { x: e.clientX, y: e.clientY }, transformation: this.state.transformation };
+            }
             this.setState(state => {
                 return { ...state, selection: undefined };
             });
@@ -928,7 +932,6 @@ export class Editor extends React.Component<Editor.Props, State> {
             props.additionalClassName || []
         );
 
-        console.log('RENDER EDITOR')
         return (
             <div style={props.style} ref={this.onEditorUpdate.bind(this)}
                 tabIndex={0} onKeyDown={this.onKeyDown.bind(this)} onWheel={this.onWheel.bind(this)}
