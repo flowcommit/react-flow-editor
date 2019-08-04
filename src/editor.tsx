@@ -234,13 +234,15 @@ export class Editor extends React.Component<Editor.Props, State> {
                 config.onChanged({ type: 'NodeMoved', node, nodeState, id }, updateState);
         } else if (this.currentAction && this.currentAction.type === 'translate') {
             const transformation = this.currentAction.transformation
-            const updateState = () => {};
-            const { config } = this.props;
-            if (config.onChanged)
-                config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.zoom }, updateState);
-            this.setState({
-                transformation: transformation,
-            })
+            if (transformation.dx !== this.state.transformation.dx || transformation.dy !== this.state.transformation.dy || transformation.zoom !== this.state.transformation.zoom) {
+                const updateState = () => {};
+                const { config } = this.props;
+                if (config.onChanged)
+                    config.onChanged({ type: 'TransformationChanged', dx: transformation.dx, dy: transformation.dy, zoom: transformation.zoom }, updateState);
+                this.setState({
+                    transformation: transformation,
+                })
+            }
         }
         this.currentAction = undefined;
         this.setState(state => ({ ...state, workingItem: undefined }));
@@ -470,7 +472,6 @@ export class Editor extends React.Component<Editor.Props, State> {
             this.currentAction = { type: 'translate', lastPos: { x: e.clientX, y: e.clientY }, transformation: this.state.transformation };
         }
         else if (e.button === BUTTON_LEFT) {
-            console.log('LEFT CLICK', e.target)
             if ((e.target as Element).nodeName === 'svg') {
                 this.currentAction = { type: 'translate', lastPos: { x: e.clientX, y: e.clientY }, transformation: this.state.transformation };
             }
