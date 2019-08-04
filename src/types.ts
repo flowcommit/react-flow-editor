@@ -119,6 +119,8 @@ export interface Connection {
  */
 export interface Port {
   name: string;
+  required: boolean;
+  types: string[];
   connection?:
       Connection[];  // Should this be restricted to arrays only?
   payload?: any;     // No UseCase up to now

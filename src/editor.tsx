@@ -655,6 +655,7 @@ export class Editor extends React.Component<Editor.Props, State> {
         const dirMapping = dir === 'we' ? { 'input': 'right', 'output': 'left' } : { 'input': 'left', 'output': 'right' };
 
         const properties = (node: Node) => {
+            console.log('properties', node)
             if (node.properties !== undefined && node.properties.display === 'only-dots') {
                 const dot = (kind: Endpoint['kind'], total: number) =>
                     (prop: Port, index: number) => {
@@ -674,7 +675,7 @@ export class Editor extends React.Component<Editor.Props, State> {
                                     ref={this.setConnectionEndpoint.bind(this, conn)}
                                     className={dotClassName}
                                     style={{ ...style, position: 'absolute', top: `calc(${100 * (index + 1) / (total + 1)}% - 8px)` }}
-                                    title={prop.name} />
+                                    title={`${prop.name}: ${(prop.types || []).join('|')}`} />
                             </div>);
                     };
                 return [...node.inputs.map(dot('input', node.inputs.length)), ...node.outputs.map(dot('output', node.outputs.length))];
@@ -685,20 +686,21 @@ export class Editor extends React.Component<Editor.Props, State> {
                     classNameOrDefault(conn.kind),
                     classNameOrDefault(dirMapping[conn.kind]),
                 );
-                const dot = (conn: Endpoint, name: string) =>
+                const dot = (conn: Endpoint, prop: Port) =>
                     <div
                         onMouseDown={this.onCreateConnectionStarted.bind(this, conn)}
                         onMouseUp={this.onCreateConnectionEnded.bind(this, conn)}
                         ref={this.setConnectionEndpoint.bind(this, conn)}
                         className={dotClassName(conn)}
-                        title={name} />;
+                        title={`${prop.name}: ${(prop.types || []).join('|')}`} />;
 
                 const mapProp = (kind: Endpoint['kind']) => (prop: Port, index: number) => {
                     const key = EndpointImpl.computeId(node.id, index, kind);
+                    console.log('mapProp', prop)
                     return (
                         <div key={key}>
                             {prop.renderer ? prop.renderer(prop) : prop.name}
-                            {dot({ nodeId: node.id, port: index, kind: kind, name: prop.name }, prop.name)}
+                            {dot({ nodeId: node.id, port: index, kind: kind, name: prop.name }, prop)}
                         </div>
                     );
                 };
