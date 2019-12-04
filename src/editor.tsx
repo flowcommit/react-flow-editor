@@ -655,7 +655,6 @@ export class Editor extends React.Component<Editor.Props, State> {
         const dirMapping = dir === 'we' ? { 'input': 'right', 'output': 'left' } : { 'input': 'left', 'output': 'right' };
 
         const properties = (node: Node) => {
-            console.log('properties', node)
             if (node.properties !== undefined && node.properties.display === 'only-dots') {
                 const dot = (kind: Endpoint['kind'], total: number) =>
                     (prop: Port, index: number) => {
@@ -696,7 +695,6 @@ export class Editor extends React.Component<Editor.Props, State> {
 
                 const mapProp = (kind: Endpoint['kind']) => (prop: Port, index: number) => {
                     const key = EndpointImpl.computeId(node.id, index, kind);
-                    console.log('mapProp', prop)
                     return (
                         <div key={key}>
                             {prop.renderer ? prop.renderer(prop) : prop.name}
