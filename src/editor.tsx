@@ -394,7 +394,8 @@ export class Editor extends React.Component<Editor.Props, State> {
         // console.log(`Key down: ${e.keyCode}`);
 
         const { selection } = this.state;
-        if (e.keyCode === KEY_CODE_DELETE) {
+        if (e.keyCode === KEY_CODE_DELETE || e.keyCode === 8) {
+            e.preventDefault()
             if (selection) {
                 const { config } = this.props;
                 if (selection.type === 'connection') {
@@ -454,6 +455,7 @@ export class Editor extends React.Component<Editor.Props, State> {
                         }
                         this.props.nodes.splice(index, 1);
                     };
+                    this.state.nodesState.delete(selection.id);
                     if (config.onChanged !== undefined)
                         config.onChanged({ type: 'NodeRemoved', id: selection.id, correspondingConnections }, updateProps);
                     if (config.onChanged === undefined || config.demoMode)
