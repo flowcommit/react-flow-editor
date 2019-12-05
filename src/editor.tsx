@@ -951,7 +951,7 @@ export class Editor extends React.Component<Editor.Props, State> {
         );
     }
 
-    createNewNode(name: string, factory: () => Node, pos: Vector2d) {
+    createNewNode(name: string, factory: (x: number, y: number) => Node, pos: Vector2d) {
 
         const isInRange = (min: number, size: number, value: number) =>
             min <= value && (min + size) >= value;
@@ -975,8 +975,8 @@ export class Editor extends React.Component<Editor.Props, State> {
                 .reduce((p, c) => p + c, '');
         };
 
-        const proto = factory();
-        const id = `${proto.type}_${createHash()}`;
+        const proto = factory(pos.x, pos.y);
+        const id = proto.id || `${proto.type}_${createHash()}`;
         // const name = type;
 
         // Make deep (enough) copy
@@ -985,14 +985,17 @@ export class Editor extends React.Component<Editor.Props, State> {
 
         const { config } = this.props;
         const updateProps = () => {
-            this.props.nodes.push({ ...proto, id });
-            this.setState(state => {
-                state.nodesState.set(id, { isCollapsed: true, pos, size: { x: 100, y: 100 } });
-                return { ...state };
-            });
+            if (this.props.nodes.filter(node => node.id === id).length === 0) {
+                console.log('Adding new id', id, 'to nodes', this.props.nodes)
+                this.props.nodes.push({ ...proto, id });
+                this.setState(state => {
+                    state.nodesState.set(id, { isCollapsed: true, pos, size: { x: 100, y: 100 } });
+                    return { ...state };
+                });
+            }
         };
         if (config.onChanged !== undefined) {
-            this.state.nodesState.set(id, { isCollapsed: true, pos, size: { x: 100, y: 100 } });
+            // this.state.nodesState.set(id, { isCollapsed: true, pos, size: { x: 100, y: 100 } });
             config.onChanged({ type: 'NodeCreated', node: { ...proto, id } }, updateProps);
         }
         if (config.demoMode || config.onChanged === undefined) {
@@ -1001,7 +1004,7 @@ export class Editor extends React.Component<Editor.Props, State> {
 
     }
 
-    onStartCreatingNewNode(name: string, factory: () => Node, pos: Vector2d, offset: Vector2d, additionalClassNames?: string[]) {
+    onStartCreatingNewNode(name: string, factory: (x: number, y: number) => Node, pos: Vector2d, offset: Vector2d, additionalClassNames?: string[]) {
         const classNameOrDefault = (label: string) => {
             if (this.props.config.style && this.props.config.style[label])
                 return this.props.config.style[label];
